@@ -70,3 +70,5 @@ systemctl start ast-streamer
 ## 音声ストリームの受取り方
 ### 音声ストリームの流れ
 音声ストリームは
+
+![draw.jpg](https://github.com/t-kawata/ast-streamer/blob/master/assets/img/draw.jpg?raw=true)
