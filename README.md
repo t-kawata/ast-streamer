@@ -69,6 +69,172 @@ systemctl start ast-streamer
 
 ## 音声ストリームの受取り方
 ### 音声ストリームの流れ
-音声ストリームは
+音声ストリームは以下の流れで、リアルタイムに渡されます。
 
 ![draw.jpg](https://github.com/t-kawata/ast-streamer/blob/master/assets/img/draw.jpg?raw=true)
+
+御社設備内に、上述の手順で `ast-streamer` を設置頂くと、ast-streamer は AIChain SIP-Trunking サービスから音声ストリームを受け取る為のスタンバイ状態となります。
+
+AIChain SIP Trunking サービス内において通話が開始されると、自動的に音声ストリームが ast-streamer に流れます。
+
+AIChain SIP Trunking サービスから音声ストリームを受け取った ast-streamer は、ast-streamer 起動のために設定した `AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` の WebSocket サーバに対して、音声ストリームをリレーします。
+
+この時、`AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` の WebSocket サーバは、御社独自のもので構いませんので、受け取った音声ストリームは、音声認識や解析等々、御社が自由に扱うことが可能です。
+
+### 音声ストリーム受取用WebSocketサーバの実装例
+ここでは、`AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` に指定できるWebSocketサーバの実装例を NodeJS v18.x を前提に示します。
+
+#### NodeJS v18.x のインストール
+例）Ubuntu 22.04 LTS
+```
+curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+apt-get install -y nodejs
+```
+
+#### 音声ストリーム受取用WebSocketサーバ構築
+作業ディレクトリ作成。
+```
+mkdir -p /usr/local/stream_catcher -m 755
+```
+依存関係インストール。
+```
+cd /usr/local/stream_catcher
+npm install ws@8.13.0
+```
+WebSocketサーバの記述。
+```
+cat <<EOF > /usr/local/stream_catcher/server.js
+#!/usr/bin/node
+const http = require('http')
+const WebSocket = require('ws')
+const url = require('url')
+const fs = require('fs')
+
+const server = http.createServer()
+const wss1 = new WebSocket.Server({ noServer: true })
+const wss2 = new WebSocket.Server({ noServer: true })
+const wss3 = new WebSocket.Server({ noServer: true })
+const port = 3031
+
+const getID = (pathname) => {
+  const match = pathname.match(/([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})/);
+  return match ? match[0] : '';
+}
+
+wss1.on('connection', (ws, id) => {
+  console.log("got left connection ")
+  var filestream = fs.createWriteStream(id + '-left.raw')
+  ws.on('message', (message) => { console.log('received left frame..'); filestream.write(message) })
+})
+wss2.on('connection', (ws, id) => {
+  console.log("got mix connection ")
+  var filestream = fs.createWriteStream(id + '-mix.raw')
+  ws.on('message', (message) => { console.log('received mix frame..'); filestream.write(message) })
+})
+wss3.on('connection', (ws, id) => {
+  console.log("got right connection ")
+  var filestream = fs.createWriteStream(id + '-right.raw')
+  ws.on('message', (message) => { console.log('received right frame..'); filestream.write(message) })
+})
+
+server.on('upgrade', function upgrade(request, socket, head) {
+  const pathname = url.parse(request.url).pathname
+  const id = getID(pathname)
+  if (/^\/left\//.test(pathname))       wss1.handleUpgrade(request, socket, head, (ws) => { wss1.emit('connection', ws, id, request) })
+  else if (/^\/mix\//.test(pathname))   wss2.handleUpgrade(request, socket, head, (ws) => { wss2.emit('connection', ws, id, request) })
+  else if (/^\/right\//.test(pathname)) wss3.handleUpgrade(request, socket, head, (ws) => { wss3.emit('connection', ws, id, request) })
+  else socket.destroy()
+})
+
+console.log(\`Start running on port \${port}.\`)
+server.listen(port)
+EOF
+chmod 755 /usr/local/stream_catcher/server.js
+```
+起動。
+```
+/usr/local/stream_catcher/server.js
+```
+#### AID について
+以下の箇所で通話の識別IDを取得しています。
+```
+server.on('upgrade', function upgrade(request, socket, head) {
+  const pathname = url.parse(request.url).pathname
+  const id = getID(pathname) // <- ここ
+```
+このIDは、AID（Answer ID）であり、通話が成立したコールに対して一意に発行されるUUID形式のIDです。
+
+AIDは、AIChain SIP Trunking サービス内において取得可能な `イベント` にフィールドとして含まれています。
+
+例）User01からUser02への内線で、User02が電話に出た時
+```
+{
+	"sid": "daf685a5-ed51-481a-a409-2bded858a175",
+	"aid": "7bace96a-b33e-4d19-ae72-e1ba25886472",
+	"event_number": 1002,
+	"ws_key": "46a5c96412d1eb74ffd1c4d51a23bccddb50d414d6531aac2272effa082b467f",
+	"from_user_key": "4eb2fb65f6830aa738080f7c402a9c39f8bd6783b723c934470b9bc77eebcb6d",
+	"from_user_name": "User01",
+	"from_user_number": "101",
+	"to_user_key": "2af65d6cce0ccac654e5086617a3f5816e561abdd12ec715651c73f278b71f85",
+	"to_user_name": "User02",
+	"to_user_number": "102",
+	"record_file": "06bbe5d7-608e-4187-a8cc-fc565bd43f2f",
+	"urls": [],
+	"datetime": "2023-09-07 22:22:59"
+}
+```
+データの中には以下のような AID が含まれています。
+```
+"aid": "7bace96a-b33e-4d19-ae72-e1ba25886472"
+```
+従って、イベントを利用してデータベース等に作成したデータ（電話履歴等）と、AIDによって紐付けることが可能であり、音声ストリームを利用した解析結果等々のデータ管理に関して一貫性を保つことができます。
+
+上記の `/usr/local/stream_catcher/server.js` が、この例における通話の音声ストリームを受け取った場合には、`/usr/local/stream_catcher/server.js` を実行したディレクトリ内に、`7bace96a-b33e-4d19-ae72-e1ba25886472-left.raw`、 `7bace96a-b33e-4d19-ae72-e1ba25886472-right.raw`、`7bace96a-b33e-4d19-ae72-e1ba25886472-mix.raw` という3つの録音ファイルが生成されることになります。
+
+#### 音声ストリームのハンドリング
+上記の `/usr/local/stream_catcher/server.js` では、受け取った音声ストリームを順にファイルに対して追記していくだけの処理が書かれていますので、`録音ファイル` が生成されました。しかし、録音ファイルではなく音声ストリーム自体をリアルタイムに扱いたい場合は、スクリプトを編集することで簡単に扱いを変えることが可能です。
+
+以下の部分でストリームを順に受け取っています。
+```
+wss1.on('connection', (ws, id) => {
+  console.log("got left connection ")
+  var filestream = fs.createWriteStream(id + '-left.raw')
+  ws.on('message', (message) => { console.log('received left frame..'); filestream.write(message) })
+})
+wss2.on('connection', (ws, id) => {
+  console.log("got mix connection ")
+  var filestream = fs.createWriteStream(id + '-mix.raw')
+  ws.on('message', (message) => { console.log('received mix frame..'); filestream.write(message) })
+})
+wss3.on('connection', (ws, id) => {
+  console.log("got right connection ")
+  var filestream = fs.createWriteStream(id + '-right.raw')
+  ws.on('message', (message) => { console.log('received right frame..'); filestream.write(message) })
+})
+```
+この中の以下のような部分でファイルへの書き込みが行われています。
+```
+  var filestream = fs.createWriteStream(id + '-left.raw')
+  ws.on('message', (message) => { console.log('received left frame..'); filestream.write(message) })
+```
+WebSocketのコネクションが `message` を受け取ったらファイルに追記するよう記述されているだけです。
+
+この時、 `message` の実体は、Frame単位の `Byte配列` です。受け取る Byte配列 は、通信や処理上のレイテンシーを考慮しなければリアルタイムのRaw音声データとなりますので、ご自由にお使い頂けます。
+
+尚、`/usr/local/stream_catcher/server.js` の例のようにファイルに書き出した Raw データを WAV に変換した上で何らかのプレイヤーで再生して聞きたいようなケースでは、`sox` コマンドを利用して、以下のように変換可能です。
+```
+sox -r 8000 -e signed-integer -b 16 before.raw after.wav
+```
+
+`/usr/local/stream_catcher/server.js` で生成されたRawファイルを一気に WAV に変換したい場合には、Rawファイルがあるディレクトリにて以下のように実行してください。
+```
+cat <<EOF > /usr/local/streamer/to_wav
+#!/bin/bash
+sox -r 8000 -e signed-integer -b 16 *-left.raw left.wav
+sox -r 8000 -e signed-integer -b 16 *-mix.raw mix.wav
+sox -r 8000 -e signed-integer -b 16 *-right.raw right.wav
+EOF
+chmod 755 /usr/local/streamer/to_wav
+/usr/local/streamer/to_wav
+```
