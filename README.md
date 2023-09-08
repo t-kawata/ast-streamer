@@ -21,11 +21,11 @@ curl -s https://raw.githubusercontent.com/t-kawata/ast-streamer/master/tools/ins
 
 | 環境変数名 | 説明 | 例 |
 |--|--|--|
-| AST_STREAMER_PORT | ast-streamer の Listen Port. | export AST_STREAMER_PORT="3030" |
-| AST_STREAMER_CODE | AIChain発行の起動認証コード。 | export AST_STREAMER_CODE="OkijhAs3ka87・・・" |
-| AST_STREAMER_LEFT | LEFT側の音声ストリームを受け取る Websocket サーバーの URL。URL内に `{id}` という文字列を設置すると、ストリームの開始時に、通話の識別IDに置換されます。 | export AST_STREAMER_LEFT="ws://localhost:3031/left/{id}" |
-| AST_STREAMER_RIGHT | RIGHT側の音声ストリームを受け取る Websocket サーバーの URL。URL内に `{id}` という文字列を設置すると、ストリームの開始時に、通話の識別IDに置換されます。 | export AST_STREAMER_RIGHT="ws://localhost:3031/right/{id}" |
-| AST_STREAMER_MIX | LEFT/RIGHTの混合音声ストリームを受け取る Websocket サーバーの URL。URL内に `{id}` という文字列を設置すると、ストリームの開始時に、通話の識別IDに置換されます。 | export AST_STREAMER_MIX="ws://localhost:3031/mix/{id}" |
+| AST_STREAMER_PORT | ast-streamer の Listen Port. | AST_STREAMER_PORT="3030" |
+| AST_STREAMER_CODE | AIChain発行の起動認証コード。 | AST_STREAMER_CODE="OkijhAs3ka87・・・" |
+| AST_STREAMER_LEFT | LEFT側の音声ストリームを受け取る Websocket サーバーの URL。URL内に `{id}` という文字列を設置すると、ストリームの開始時に、通話の識別IDに置換されます。 | AST_STREAMER_LEFT="ws://localhost:3031/left/{id}" |
+| AST_STREAMER_RIGHT | RIGHT側の音声ストリームを受け取る Websocket サーバーの URL。URL内に `{id}` という文字列を設置すると、ストリームの開始時に、通話の識別IDに置換されます。 | AST_STREAMER_RIGHT="ws://localhost:3031/right/{id}" |
+| AST_STREAMER_MIX | LEFT/RIGHTの混合音声ストリームを受け取る Websocket サーバーの URL。URL内に `{id}` という文字列を設置すると、ストリームの開始時に、通話の識別IDに置換されます。 | AST_STREAMER_MIX="ws://localhost:3031/mix/{id}" |
 
 `/etc/sysconfig/ast-streamer` の内容を適切に編集してください。  
 以下設定例となります。
