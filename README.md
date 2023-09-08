@@ -1,0 +1,3 @@
+# AIChain SIP Trunking Streamer
+AIChain SIP Trunking サービス内で行われた通話の音声ストリームをリアルタイムで取得する為の実行バイナリです。
+ast-streamer を使用することにより、通話をframe単位でストリームとして取得し、リアルタイムの音声認識や感情解析等を含む音声解析を行うことができます。
