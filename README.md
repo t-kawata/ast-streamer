@@ -66,3 +66,7 @@ Usage of streamer:
 ```
 systemctl start ast-streamer
 ```
+
+## 音声ストリームの受取り方
+### 音声ストリームの流れ
+音声ストリームは
