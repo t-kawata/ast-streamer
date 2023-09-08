@@ -28,7 +28,7 @@ curl -s https://raw.githubusercontent.com/t-kawata/ast-streamer/master/tools/ins
 | AST_STREAMER_MIX | LEFT/RIGHTの混合音声ストリームを受け取る Websocket サーバーの URL。URL内に `{id}` という文字列を設置すると、ストリームの開始時に、通話の識別IDに置換されます。 | AST_STREAMER_MIX="ws://localhost:3031/mix/{id}" |
 
 `/etc/sysconfig/ast-streamer` の内容を適切に編集してください。  
-以下設定例となります。
+以下設定例となります。`AST_STREAMER_CODE` に、AIChainより発行する適切な起動認証コードが設定されていない場合、正常に起動できませんのでご注意ください。
 ```
 cat <<EOF > /etc/sysconfig/ast-streamer
 AST_STREAMER_PORT="3030"
