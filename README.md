@@ -6,14 +6,14 @@ ast-streamer を使用することにより、通話をframe単位でストリ�
 [コチラ](https://github.com/t-kawata/ast-streamer/releases) から最新バージョンのバイナリのダウンロードが可能です。
 
 ## ast-streamer のインストール
-以下、`ast-streamer-linux-amd64-0.1.0` を使用することを前提とした説明を行います。
+以下、`ast-streamer-linux-amd64-0.1.1` を使用することを前提とした説明を行います。
 
-ast-streamer-linux-amd64-0.1.0 は Linux AMD64 の環境で実行可能なバイナリです。Windowsサーバー環境では使用できませんのでご注意ください。
+ast-streamer-linux-amd64-0.1.1 は Linux AMD64 の環境で実行可能なバイナリです。Windowsサーバー環境では使用できませんのでご注意ください。
 
 ### インストール
 以下のコマンドを実行して ast-streamer をインストールしてください。
 ```
-curl -s https://raw.githubusercontent.com/t-kawata/ast-streamer/master/tools/install-linux-amd64-0.1.0.sh | sudo bash
+curl -s https://raw.githubusercontent.com/t-kawata/ast-streamer/master/tools/install-linux-amd64-0.1.1.sh | sudo bash
 ```
 
 ### 環境変数の設定
