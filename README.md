@@ -178,13 +178,22 @@ systemctl restart ast-streamer
 ![draw2.jpg](https://github.com/t-kawata/ast-streamer/blob/master/assets/img/draw2.jpg?raw=true)
 
 #### AID について
-以下の箇所で通話の識別IDを取得しています。
+`ast-streamer` から `server.js` に対しては URL 内の置換文字列として AID が渡されます。AID は Answer ID であり、通話が成立したコールに対して一意に発行されるUUID形式のIDです。
+
+`ast-streamer` の起動環境変数で以下のように記述されている場合、
+```
+AST_STREAMER_LEFT="ws://localhost:3031/left/{id}"
+AST_STREAMER_RIGHT="ws://localhost:3031/right/{id}"
+AST_STREAMER_MIX="ws://localhost:3031/mix/{id}"
+```
+`{id}` の部分が、その通話の AID に置換された状態で `server.js` の WebSocket サーバに対して接続が試行されます。
+
+接続が行われると、`server.js` 内の以下の箇所で通話の識別IDを取得しています。
 ```
 server.on('upgrade', function upgrade(request, socket, head) {
   const pathname = url.parse(request.url).pathname
   const id = getID(pathname) // <- ここ
 ```
-このIDは、AID（Answer ID）であり、通話が成立したコールに対して一意に発行されるUUID形式のIDです。
 
 AIDは、AIChain SIP Trunking サービス内において取得可能な `イベント` にフィールドとして含まれています。
 
@@ -212,10 +221,10 @@ AIDは、AIChain SIP Trunking サービス内において取得可能な `イベ
 ```
 従って、イベントを利用してデータベース等に作成したデータ（電話履歴等）と、AIDによって紐付けることが可能であり、音声ストリームを利用した解析結果等々のデータ管理に関して一貫性を保つことができます。
 
-上記の `/usr/local/stream_catcher/server.js` が、この例における通話の音声ストリームを受け取った場合には、`/usr/local/stream_catcher/server.js` を実行したディレクトリ内に、`7bace96a-b33e-4d19-ae72-e1ba25886472-left.raw`、 `7bace96a-b33e-4d19-ae72-e1ba25886472-right.raw`、`7bace96a-b33e-4d19-ae72-e1ba25886472-mix.raw` という3つの録音ファイルが生成されることになります。
+`server.js` が、この例における通話の音声ストリームを受け取った場合には、`server.js` を実行したディレクトリ内に、`7bace96a-b33e-4d19-ae72-e1ba25886472-left.raw`、 `7bace96a-b33e-4d19-ae72-e1ba25886472-right.raw`、`7bace96a-b33e-4d19-ae72-e1ba25886472-mix.raw` という3つの録音ファイルが生成されることになります。
 
 #### 音声ストリームのハンドリング
-上記の `/usr/local/stream_catcher/server.js` では、受け取った音声ストリームを順にファイルに対して追記していくだけの処理が書かれていますので、`録音ファイル` が生成されました。しかし、録音ファイルではなく音声ストリーム自体をリアルタイムに扱いたい場合は、スクリプトを編集することで簡単に扱いを変えることが可能です。
+上記の `server.js` では、受け取った音声ストリームのchunkを順にファイルに対して追記していくだけの処理が書かれていますので、`録音ファイル` が生成されました。しかし、録音ファイルではなく音声ストリーム自体をリアルタイムに扱いたい場合は、スクリプトを編集することで簡単に扱いを変えることが可能です。
 
 以下の部分でストリームを順に受け取っています。
 ```
@@ -242,14 +251,14 @@ wss3.on('connection', (ws, id) => {
 ```
 WebSocketのコネクションが `message` を受け取ったらファイルに追記するよう記述されているだけです。
 
-この時、 `message` の実体は、Frame単位の `Byte配列` です。受け取る Byte配列 は、通信や処理上のレイテンシーを考慮しなければリアルタイムのRaw音声データとなりますので、ご自由にお使い頂けます。
+この時、 `message` の実体は、Frame単位の `Byte配列` です。受け取る Byte配列 は、通信や処理上のレイテンシーを考慮しなければリアルタイムのRaw音声データとなりますので、リアルタイム解析ソリューションの構築など、ご自由にお使い頂けます。
 
-尚、`/usr/local/stream_catcher/server.js` の例のようにファイルに書き出した Raw データを WAV に変換した上で何らかのプレイヤーで再生して聞きたいようなケースでは、`sox` コマンドを利用して、以下のように変換可能です。
+尚、`server.js` の例のようにファイルに書き出した Raw データを WAV に変換した上で何らかのプレイヤーで再生して聞きたいようなケースでは、`sox` コマンドを利用して、以下のように変換可能です。
 ```
 sox -r 8000 -e signed-integer -b 16 before.raw after.wav
 ```
 
-`/usr/local/stream_catcher/server.js` で生成されたRawファイルを一気に WAV に変換したい場合には、Rawファイルがあるディレクトリにて以下のように実行してください。
+`server.js` で生成されたRawファイルを一気に WAV に変換したい場合には、Rawファイルがあるディレクトリにて以下のように実行してください。
 ```
 cat <<EOF > /usr/local/streamer/to_wav
 #!/bin/bash
