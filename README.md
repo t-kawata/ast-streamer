@@ -75,6 +75,12 @@ systemctl start ast-streamer
 
 御社設備内に、上述の手順で `ast-streamer` を設置頂くと、ast-streamer は AIChain SIP-Trunking サービスから音声ストリームを受け取る為のスタンバイ状態となります。
 
+上図における「御社設備」内に `ast-streamer` が起動しており、`/etc/sysconfig/ast-streamer` において `AST_STREAMER_PORT="3030"` が設定されている場合、`ws://0.0.0.0:3030/` で WebSocket の LISTEN がされている状態です。
+
+当該御社サーバが Public に sample.com というドメインを持っていると仮定すると、AIChain SIP Trunking サービスからの音声ストリーム受け取り口として、`ws://sample.com:3030/` が利用できる状態です（要FW設定）。
+
+[★ 音声ストリーム連携作成API](https://veiled-node-a86.notion.site/AIChain-SIP-Trunking-API-Doc-for-v0-4a6e590f6f624b7cb648bd71a18613f5#fa9f04a3644243ad8c9e93c80481ba3c) を利用して、音声ストリーム受け取り口である `ws://sample.com:3030/` を登録すると、15分以内に連携が開始されます。
+
 AIChain SIP Trunking サービス内において通話が開始されると、自動的に音声ストリームが ast-streamer に流れます。
 
 AIChain SIP Trunking サービスから音声ストリームを受け取った ast-streamer は、ast-streamer 起動のために設定した `AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` の WebSocket サーバに対して、音声ストリームをリレーします。
@@ -82,7 +88,7 @@ AIChain SIP Trunking サービスから音声ストリームを受け取った a
 この時、`AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` の WebSocket サーバは、御社独自のもので構いませんので、受け取った音声ストリームは、音声認識や解析等々、御社が自由に扱うことが可能です。
 
 ### 音声ストリーム受取用WebSocketサーバの実装例
-ここでは、`AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` に指定できるWebSocketサーバの実装例を NodeJS v18.x を前提に示します。
+ここでは、`AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` に指定できるWebSocketサーバの実装例を NodeJS v18.x を前提に示します。`ast-streamer` をインストールしたサーバと同じローカルに以下の実装を行うことを前提とします。
 
 #### NodeJS v18.x のインストール
 例）Ubuntu 22.04 LTS
@@ -155,6 +161,22 @@ chmod 755 /usr/local/stream_catcher/server.js
 ```
 /usr/local/stream_catcher/server.js
 ```
+
+`server.js` が起動できたら、`/etc/sysconfig/ast-streamer` の `AST_STREAMER_LEFT`、`AST_STREAMER_RIGHT`、`AST_STREAMER_MIX` をそれぞれ以下のように設定してください。
+```
+AST_STREAMER_LEFT="ws://localhost:3031/left/{id}"
+AST_STREAMER_RIGHT="ws://localhost:3031/right/{id}"
+AST_STREAMER_MIX="ws://localhost:3031/mix/{id}"
+```
+これらの環境変数の設定により、`ast-streamer` と `server.js` は音声ストリームをリアルタイムにリレーする関係となります。
+
+環境変数が設定できたら、`ast-streamer` を再起動してください。
+```
+systemctl restart ast-streamer
+```
+
+![draw2.jpg](https://github.com/t-kawata/ast-streamer/blob/master/assets/img/draw2.jpg?raw=true)
+
 #### AID について
 以下の箇所で通話の識別IDを取得しています。
 ```
