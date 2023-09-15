@@ -197,6 +197,8 @@ server.on('upgrade', function upgrade(request, socket, head) {
 
 AIDは、AIChain SIP Trunking サービス内において取得可能な `イベント` にフィールドとして含まれています。
 
+イベントの詳細については、[コチラ](https://veiled-node-a86.notion.site/AIChain-SIP-Trunking-API-Doc-for-v0-4a6e590f6f624b7cb648bd71a18613f5#8a469a5bac904470a0bd4cadb5de4551) をご参照ください。
+
 例）User01からUser02への内線で、User02が電話に出た時
 ```
 {
